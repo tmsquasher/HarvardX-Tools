@@ -18,6 +18,7 @@ import re
 import pytz
 import datetime
 import dateutil.parser
+import trackingLogParser
 
 '''
 DERIVED DATA
@@ -117,7 +118,19 @@ def makeVerbExampleTable(df):
 def makePersonLevel(df):
     # Makes a DataFrame where rows are unique usernames, columns are
     # verb types, and values are the number of occurrences of each 
-    # verb type per user. Note: 'df' only needs to have actor/verb
-    # columns.
+    # verb type per user. Also includes a column for 'days_active'.
+    # Note: 'df' only needs to have columns for actor, verb, and time.
+    
+    # calc days active (rough measure based on UTC)
+    user_dates = small[["actor", "time"]]
+    user_dates["time"] = pd.to_datetime(user_dates["time"]).apply(lambda x: x.date())
+    user_dates = user_dates.groupby("actor").agg(lambda x: len(x.unique()))
+
+    # calc verb counts
     user_verbs = df[["actor", "verb"]].groupby([df["actor"], df["verb"]]).size().reset_index()
-    return user_verbs.pivot(index="actor", columns="verb", values=0)
+    user_verbs = user_verbs.pivot(index="actor", columns="verb", values=0)
+    
+    result = pd.DataFrame(user_verbs, columns=possible_verbs).fillna(0)
+    result["days_active"] = user_dates
+    
+    return result
