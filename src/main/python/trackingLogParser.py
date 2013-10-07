@@ -30,9 +30,9 @@ import csv
 import json # ujson is faster!
 
 # list manually maintained
+# verb names limited to 22 chars for easier use with stats software
 possible_verbs = ["annotation_create"
                     ,"book_view"
-                    #,"email" # unreliable and not used for now
                     ,"forum_close"
                     ,"forum_create"
                     ,"forum_delete"
@@ -50,9 +50,9 @@ possible_verbs = ["annotation_create"
                     ,"forum_update"
                     ,"forum_upvote"
                     ,"forum_view"
-                    ,"forum_view_followed_threads"
+                    ,"forum_view_followed"
                     ,"forum_view_inline"
-                    ,"forum_view_user_profile"
+                    ,"forum_view_user"
                     ,"page_view"
                     ,"page_close"
                     ,"poll_answer"
@@ -267,7 +267,6 @@ class LogParser:
             pass
 
         ### VIDEO ###
-        # TODO: is a specific event logged when the user changes playback speed?
         # TODO: add video_duration to course axes and to the meta field here (use YouTube API)
         if(re_video_play.search(event_type) or re_video_pause.search(event_type)):
             # (note: video_play and video_pause are identical other than the verb name)
@@ -399,19 +398,6 @@ class LogParser:
             r = None
             m = None
 
-        ### EMAIL ### 
-        # TODO: not particularly reliable; leaving out for now
-        # problematic example: event_type = /courses/HarvardX/CB22x/2013_Spring/submission_history/mary.finn@oir.ie/i4x://HarvardX/CB22x/problem/6f869b8bb1e04ec5b2106afc80708c9b
-        # elif(re_email.search(event_type)):
-        #     v = "email"
-        #     o_name = event_type.split("/")[-1]
-        #     o = {
-        #         "object_type" : "email",
-        #         "object_name" : o_name
-        #     }
-        #     r = None
-        #     m = None
-
         ### ANNOTATION ### (only in CB22x)
         # TODO: annocation_edit and annotation_delete -- requires looking at multiple events at once (difficult with current framework)
         elif(re_annotation_create.search(event_type)):
@@ -482,7 +468,7 @@ class LogParser:
             except KeyError:
                 m = None # sometimes there won't be anything in the "event"
         elif(re_forum_view_followed_threads.search(event_type)):
-            v = "forum_view_followed_threads"
+            v = "forum_view_followed"
             o_name = ("".join(event_type.split("users/")[1:]).split("/")[0]) # user id is the trailing number
             o = {
                 "object_type" : "forum_user_id",
@@ -497,7 +483,7 @@ class LogParser:
             try: m["group_id"] = e_get["group_id"]
             except KeyError: m["group_id"] = None
         elif(re_forum_view_user_profile.search(event_type)):
-            v = "forum_view_user_profile"
+            v = "forum_view_user"
             o_name = "".join(event_type.split("users/")[1:]) # user id is the trailing number
             o = {
                 "object_type" : "forum_user_id",
