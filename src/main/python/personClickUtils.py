@@ -94,7 +94,7 @@ def getUniqueDiscardPatterns(df_discards):
 
     return df_discards.event_type.apply(replaceHashes).value_counts()
 
-def countAnonymousUsers(df, pct=True):
+def countAnonymousUserEvents(df, pct=True):
     # When users aren't logged in, logged events don't have usernames.
     # When we don't have usernames, it's harder to do person-level
     # analyses.
@@ -120,9 +120,9 @@ def makePersonLevel(df):
     # verb types, and values are the number of occurrences of each 
     # verb type per user. Also includes a column for 'days_active'.
     # Note: 'df' only needs to have columns for actor, verb, and time.
-    
+
     # calc days active (rough measure based on UTC)
-    user_dates = small[["actor", "time"]]
+    user_dates = df[["actor", "time"]]
     user_dates["time"] = pd.to_datetime(user_dates["time"]).apply(lambda x: x.date())
     user_dates = user_dates.groupby("actor").agg(lambda x: len(x.unique()))
 
