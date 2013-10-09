@@ -56,7 +56,7 @@ def getIPInfo(df, geolitecity_dat):
         ip = time_ip_tuple[1]
         rec = gi4.record_by_addr(ip)
 
-        # calc local time; sometimes the time_zone isn't in the db
+        # calc local time; sometimes the time_zone isn't in the pygeoip record
         t = time_ip_tuple[0]
         if(len(t) > 5 and t[-6:] == '+00:00'): t = t[:-6]
         tz = rec['time_zone']
@@ -74,6 +74,29 @@ def getIPInfo(df, geolitecity_dat):
             })
 
     return df[['time', 'ip']].apply(getInfo, axis=1)
+
+def getStartAndEndWeeks(df, course_start_datetime):
+    """
+    Returns a dataframe with the start week and end week for each
+    unique username in a person-click dataset. You can easily merge
+    the result with the original person-click dataframe like so:
+
+    pd.merge(person_click, start_end_weeks)
+    """
+    users = df[['actor', 'time']].groupby('actor')
+    
+    # person-click events are sorted by time, so first() returns the time of the user's first event
+    relative_start = pd.to_datetime(users.first().time) - course_start 
+    relative_end = pd.to_datetime(users.last().time) - course_start
+    
+    # first week of the course is considered week 0
+    def determineWeek(x):
+        if x < 0: return floor(x / np.timedelta64(1, 'W'))
+        else: return ceil(x / np.timedelta64(1, 'W')) - 1
+    
+    # return with reset index for easy merging on 'actor' column
+    return pd.DataFrame({'start_week': relative_start.apply(determineWeek),
+                         'end_week': relative_end.apply(determineWeek)}).reset_index()
 
 
 # DATA INTEGRITY
