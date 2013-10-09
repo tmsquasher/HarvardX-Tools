@@ -284,7 +284,11 @@ class LogParser:
             # event_type: [browser] "show_transcript" or "hide_transcript"
             # event: '{"id":"i4x-HarvardX-CB22x-video-ffdbfae1bbb34cd9a610c88349c350ec","code":"IWUv8ltEJOs","currentTime":0}'
             v = "video_show_transcript" if "show_transcript" == event_type else "video_hide_transcript"
-            o = self.__getCoursewareObject(event.split("video-")[1].split("\"")[0])
+            try:
+                o = self.__getCoursewareObject(event.split("video-")[1].split("\"")[0])
+            except IndexError:
+                # two cases in PH207x log where the video id is " "; these appear to be errors
+                return None
             r = None
             m = {"playback_position_secs": e["currentTime"]}
         elif(re_video_change_speed.search(event_type)):
