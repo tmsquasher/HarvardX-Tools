@@ -240,6 +240,12 @@ class LogParser:
         from a single JSON-formatted log entry (as a string). Returns a dictionary 
         if activity can be parsed, None otherwise.
         '''
+
+        v = None
+        o = None
+        r = None
+        m = None
+
         # convert log_item string into dict
         log_item_json = json.loads(log_item)
 
@@ -274,7 +280,6 @@ class LogParser:
             # event: "{"id":"i4x-HarvardX-CB22x-video-39c9cccdd02846d998ae5cd894830626","code":"YTOR7kAvl7Y","currentTime":279.088,"speed":"1.0"}"
             v = "video_play" if "play_video" == event_type else "video_pause"
             o = self.__getCoursewareObject(event.split("video-")[1].split("\"")[0])
-            r = None
             m = {"youtube_id": e["code"]}
             try: m["playback_speed"] = e["speed"]
             except KeyError: m["playback_speed"] = None
@@ -289,14 +294,12 @@ class LogParser:
             except IndexError:
                 # two cases in PH207x log where the video id is " "; these appear to be errors
                 return None
-            r = None
             m = {"playback_position_secs": e["currentTime"]}
         elif(re_video_change_speed.search(event_type)):
             # event_type: [browser] "speed_change_video"
             # event: '{"id":"i4x-HarvardX-CB22x-video-a4fc2d96c8354252bb3e405816308828","code":"IERh8MkASDI","current_time":334.4424743652344,"old_speed":"1.50","new_speed":"1.0"}'
             v = "video_change_speed"
             o = self.__getCoursewareObject(event.split("video-")[1].split("\"")[0])
-            r = None
             m = {
                 "youtube_id": e["code"],
                 "playback_position_secs": e["current_time"], # note "current_time" is different than "currentTime"!
@@ -308,7 +311,6 @@ class LogParser:
             # event: '{"id":"i4x-HarvardX-CB22x-video-2b509bcac67b49f9bcc51b85072dcef0","code":"Ct_M-_bP81k","old_time":641.696984,"new_time":709,"type":"onSlideSeek"}'
             v = "video_seek"
             o = self.__getCoursewareObject(event.split("video-")[1].split("\"")[0])
-            r = None
             m = {
                 "youtube_id": e["code"],
                 "new_playback_position_secs": e["new_time"],
@@ -328,7 +330,6 @@ class LogParser:
             try: o = self.__getCoursewareObject(event.split("sequential/")[1].split("\"")[0])
             except IndexError: 
                 o = self.__getCoursewareObject(event.split("videosequence/")[1].split("\"")[0]) # used in PH207x
-            r = None
             m = {
                 "new": e["new"],
                 "id": e["id"]
@@ -343,8 +344,6 @@ class LogParser:
             # event_type: [server] "/courses/HarvardX/ER22x/2013_Spring/modx/i4x://HarvardX/ER22x/poll_question/T13_poll/get_state"
             v = "poll_view"
             o = self.__getCoursewareObject(event_type.split("/")[-2])
-            r = None
-            m = None
         elif(re_poll_answer.search(event_type)):
             # logged when user clicks a poll answer; "result" field can be 'yes', 'no', or any other answer value
             # event_type: [server] "/courses/HarvardX/ER22x/2013_Spring/modx/i4x://HarvardX/ER22x/poll_question/T7_poll/yes"
@@ -352,7 +351,6 @@ class LogParser:
             split = event_type.split("/")
             o = self.__getCoursewareObject(split[-2])
             r = split[-1]
-            m = None
 
         ### PROBLEM (CAPA) ###
         elif(re_problem_view.search(event_type)):
@@ -360,8 +358,6 @@ class LogParser:
             # event_type: [server] "/courses/HarvardX/CB22x/2013_Spring/modx/i4x://HarvardX/CB22x/problem/bb8a422a718a4788b174220ed0e9c0d7/problem_get"
             v = "problem_view"
             o = self.__getCoursewareObject(event_type.split("problem/")[1].split("/")[0])
-            r = None
-            m = None
         elif((re_problem_check.search(event_type) or re_problem_check2.search(event_type)) and log_item_json["event_source"] == "server"):
             # when a user clicks 'Check,' three events are logged...
             # event_type: [browser] "problem_check"
@@ -370,7 +366,6 @@ class LogParser:
             v = "problem_check"
             o = self.__getCoursewareObject(event.split("problem/")[1].split("'")[0])
             r = event.split("'")[3] # value of key "success"
-            m = None
         elif(re_problem_save_success.search(event_type) or re_problem_save_fail.search(event_type)):
             # when a user clicks 'Save,' three events are logged...
             # event_type: [browser] "problem_save"
@@ -379,7 +374,6 @@ class LogParser:
             v = "problem_save"
             o = self.__getCoursewareObject(event.split("problem/")[1].split("'")[0])
             r = "success" if event_type.split("problem_")[1] == "save" else "fail"
-            m = None
         elif(re_problem_show_answer.search(event_type)):
             # when a user clicks 'Show Answer', three events are logged...
             # event_type: [browser] "problem_show"
@@ -387,8 +381,6 @@ class LogParser:
             # event_type: [server] "showanswer" or "show_answer"
             v = "problem_show_answer"
             o = self.__getCoursewareObject(event.split("problem/")[1].split("'")[0])
-            r = None
-            m = None
 
         ### WIKI ###
         # TODO: flesh this out with better object names
@@ -399,8 +391,6 @@ class LogParser:
                 "object_type" : "url",
                 "object_name" : o_name
             }
-            r = None
-            m = None
 
         ### ANNOTATION ### (only in CB22x)
         # TODO: annocation_edit and annotation_delete -- requires looking at multiple events at once (difficult with current framework)
@@ -419,8 +409,6 @@ class LogParser:
                 "object_type" : "asset_id",
                 "object_name" : o_name
             }
-            r = None
-            m = None
 
         ### BOOK ###
         elif(re_book_view.search(event_type)):
@@ -438,8 +426,6 @@ class LogParser:
                 "object_type" : "asset_id",
                 "object_name" : o_name
             }
-            r = None
-            m = None
         elif(re_book_view_actual.search(event_type)):
             # event_type: [browser] book
             # event: '{"type":"gotopage","old":2,"new":249}' or '{"type":"nextpage","new":3}'
@@ -448,7 +434,6 @@ class LogParser:
                 "object_type" : "book_page",
                 "object_name" : e["new"]
             }
-            r = None
             m = {e["type"]}
 
         ### FORUM - TOP LEVEL ###
@@ -462,7 +447,6 @@ class LogParser:
                 "object_type" : "forum_hash",
                 "object_name" : o_name
             }
-            r = None
             try: 
                 m = {
                     "sort_key": e_get["sort_key"][0],
@@ -478,14 +462,14 @@ class LogParser:
                 "object_type" : "forum_user_id",
                 "object_name" : o_name
             }
-            r = None
-            m = {
-                "sort_key": e_get["sort_key"][0],
-                "sort_order": e_get["sort_order"][0],
-                "page": e_get["page"][0]
-            }
-            try: m["group_id"] = e_get["group_id"]
-            except KeyError: m["group_id"] = None
+            try:
+                m = {
+                    "sort_key": e_get["sort_key"][0],
+                    "sort_order": e_get["sort_order"][0],
+                    "page": e_get["page"][0]
+                }
+            except KeyError: 
+                m = None
         elif(re_forum_view_user_profile.search(event_type)):
             v = "forum_view_user"
             o_name = "".join(event_type.split("users/")[1:]) # user id is the trailing number
@@ -493,11 +477,8 @@ class LogParser:
                 "object_type" : "forum_user_id",
                 "object_name" : o_name
             }
-            r = None
-            m = None
         elif(re_forum_search.search(event_type)):
             v = "forum_search"
-            r = None
             try: 
                 m = {
                     "text": e_get["text"][0].encode("utf-8"),
@@ -524,130 +505,81 @@ class LogParser:
         elif(re_forum_thread_create.search(event_type)):
             v = "forum_create"
             o = self.__getForumObject(event_type)
-            r = None
             m = None # we could put the new thread's text here...
         elif(re_forum_thread_close.search(event_type)):
             v = "forum_close"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_delete.search(event_type)):
             v = "forum_delete"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_downvote.search(event_type)):
             v = "forum_downvote"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_flag_abuse.search(event_type)):
             v = "forum_flag_abuse"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_follow.search(event_type)):
             v = "forum_follow"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_pin.search(event_type)):
             v = "forum_pin"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_reply.search(event_type)):
             v = "forum_reply"
-            o = self.__getForumObject(event_type)
-            r = None
-            m = None # we could put the new comment's text here...
+            o = self.__getForumObject(event_type) # we could put the new comment's text here...
         elif(re_forum_thread_unflag_abuse.search(event_type)):
             v = "forum_unflag_abuse"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_unfollow.search(event_type)):
             v = "forum_unfollow"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_unpin.search(event_type)):
             v = "forum_unpin"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_unvote.search(event_type)):
             v = "forum_unvote"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_update.search(event_type)):
             v = "forum_update"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_upvote.search(event_type)):
             v = "forum_upvote"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_view_inline.search(event_type)):
             v = "forum_view_inline"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_thread_view.search(event_type)):
             v = "forum_view"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
 
         ### FORUM - COMMENTS ###
         elif(re_forum_comment_delete.search(event_type)):
             v = "forum_delete"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_comment_downvote.search(event_type)):
             v = "forum_downvote"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_comment_endorse.search(event_type)):
             v = "forum_endorse"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_comment_flag_abuse.search(event_type)):
             v = "forum_flag_abuse"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_comment_reply.search(event_type)):
             v = "forum_reply" 
-            o = self.__getForumObject(event_type)
-            r = None
-            m = None # we could put the new comment's text here...
+            o = self.__getForumObject(event_type) # we could put the new comment's text here...
         elif(re_forum_comment_unflag_abuse.search(event_type)):
             v = "forum_unflag_abuse"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_comment_unvote.search(event_type)):
             v = "forum_unvote"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_comment_update.search(event_type)):
             v = "forum_update"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
         elif(re_forum_comment_upvote.search(event_type)):
             v = "forum_upvote"
             o = self.__getForumObject(event_type)
-            r = None
-            m = None
 
         ### PAGE ### 
         # need to make sure these objects can be found in course axes; otherwise, likely just noise/malformed urls
@@ -663,8 +595,6 @@ class LogParser:
                 "object_type" : "courseware_name",
                 "object_name" : o_name
             }
-            r = None
-            m = None
         elif(re_page_view_main.search(event_type)):
             # page_views outside of the courseware (top-level tabs) look like this...
             # event_type: [server] /courses/HarvardX/CB22x/2013_Spring/info
@@ -678,8 +608,6 @@ class LogParser:
                 "object_type" : "tab_name",
                 "object_name" : o_name
             }
-            r = None
-            m = None
         elif(re_page_close.search(event_type)):
             # TODO: how reliable are page_close events within edX and across browsers?
             # page: https://courses.edx.org/courses/HarvardX/CB22x/2013_Spring/courseware/74a6ab26887c474eae8a8632600d9618/7b1ef88acd3743eb922d82781a2371cc/
@@ -697,8 +625,6 @@ class LogParser:
                 "object_type" : "courseware_name",
                 "object_name" : o_name
             }
-            r = None
-            m = None
             
         else:
             return None
